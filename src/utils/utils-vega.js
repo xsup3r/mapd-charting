@@ -1,14 +1,5 @@
 export function notNull (value) { return value != null /* double-equals also catches undefined */ }
 
-function convertHexToRGBA (hex, opacity) {
-  hex = hex.replace("#", "")
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
-
-  return `rgba(${r},${g},${b},${opacity / 100})`
-}
-
 export function createVegaAttrMixin (layerObj, attrName, defaultVal, nullVal, useScale, prePostFuncs) {
   let scaleFunc = "", fieldAttrFunc = ""
   const capAttrName = attrName.charAt(0).toUpperCase() + attrName.slice(1)
@@ -25,7 +16,7 @@ export function createVegaAttrMixin (layerObj, attrName, defaultVal, nullVal, us
 
     layerObj["_build" + capAttrName + "Scale"] = function (chart, layerName) {
       const scale = layerObj[scaleFunc]()
-      if (scale && scale.domain && scale.domain().length && scale.range().length && scaleFunc === "fillColorScale") {
+      if (scale && scale.domain && scale.domain().length && scale.range().length) {
         const colorScaleName = layerName + "_" + attrName
         const rtnObj = {
           name: colorScaleName,
@@ -38,31 +29,6 @@ export function createVegaAttrMixin (layerObj, attrName, defaultVal, nullVal, us
 
         if (scale.clamp) {
           rtnObj.clamp = scale.clamp()
-        }
-
-        return rtnObj
-      } else if (layerObj.densityAccumulatorEnabled()) {
-        const
-          colorScaleName = layerName + "_" + attrName,
-          colorsToUse = layerObj.defaultFillColor(),
-          domainInterval = 100 / (colorsToUse.length - 1),
-          linearScale = colorsToUse.map((color, i) => i * domainInterval / 100),
-          range = colorsToUse.map((color, i, colorArray) => {
-            const normVal = i / (colorArray.length - 1)
-            let interp = Math.min(normVal / 0.65, 1.0)
-            interp = interp * 0.375 + 0.625
-            return convertHexToRGBA(color, interp * 100)
-          })
-
-        const rtnObj = {
-          name: colorScaleName,
-          type: "linear",
-          domain: linearScale,
-          range,
-          accumulator: "density",
-          minDensityCnt: "-2ndStdDev",
-          maxDensityCnt: "2ndStdDev",
-          clamp: true
         }
 
         return rtnObj

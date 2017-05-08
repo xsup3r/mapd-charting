@@ -26,7 +26,7 @@ export default function rasterChart (parent, useMap, chartGroup, _mapboxgl) {
   if (_useMap) {
     _chart = mapMixin(baseMixin({}), parentDivId, _mapboxgl, true, false)
   } else {
-    _chart = scatterMixin(coordinateGridRasterMixin({}, _mapboxgl, browser), _mapboxgl, true)
+    _chart = scatterMixin(coordinateGridRasterMixin({}, _mapboxgl, browser), _mapboxgl, false)
   }
 
     // unset predefined mandatory attributes
@@ -115,20 +115,6 @@ export default function rasterChart (parent, useMap, chartGroup, _mapboxgl) {
 
   _chart.getLayerNames = function () {
     return _layers
-  }
-
-  _chart.xRangeFilter = function (filter) {
-    for (const layerName in _layerNames) {
-      const layer = _layerNames[layerName]
-      layer.yDim().filter(filter)
-    }
-  }
-
-  _chart.yRangeFilter = function (filter) {
-    for (const layerName in _layerNames) {
-      const layer = _layerNames[layerName]
-      layer.yDim().filter(filter)
-    }
   }
 
   _chart.destroyChart = function () {
@@ -350,12 +336,8 @@ export default function rasterChart (parent, useMap, chartGroup, _mapboxgl) {
       return
     }
 
-    return _chart.con().getResultRowForPixel(_chart.__dcFlag__, pixel, layerObj, [function (err, results) {
-      if (err) {
-        throw new Error(`getResultRowForPixel failed with message: ${err.message}`)
-      } else {
-        return callback(results[0])
-      }
+    return _chart.con().getResultRowForPixel(_chart.__dcFlag__, pixel, layerObj, [function (results) {
+      return callback(results[0])
     }], Math.ceil(_popupSearchRadius * pixelRatio))
   }
 

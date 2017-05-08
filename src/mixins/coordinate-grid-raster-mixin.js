@@ -33,7 +33,7 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
   const _offset = [0, 0]
   const _currDataBounds = [[0, 1], [0, 1]]
   let _queryId = null
-  let _filters = []
+  let _filters = null
   let _initialFilters = null
   let _gridInitted = false
 
@@ -88,8 +88,8 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
 
     _filters = shouldReset ? [] : [[xrange, yrange]]
     _chart._invokeFilteredListener(_filters, false)
-    _chart.xRangeFilter(xrange)
-    _chart.yRangeFilter(yrange)
+    _chart.xRangeFilter && _chart.xRangeFilter(xrange)
+    _chart.yRangeFilter && _chart.yRangeFilter(yrange)
   }
 
   let _parent
@@ -636,9 +636,7 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
     const height = _chart.effectiveHeight()
     const margins = _chart.margins()
     const left = margins.left
-    const right = margins.right
     const top = margins.top
-    const bottom = margins.bottom
     const pixelRatio = window.devicePixelRatio || 1
 
     const prevWidth = _chartBody.style("width")
@@ -651,12 +649,6 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
       .style("top", top + "px")
       .attr("width", width * pixelRatio)
       .attr("height", height * pixelRatio)
-
-    _parent.style("width", (width + (right + left)) + "px")
-      .style("height", (height + (top + bottom)) + "px")
-      .attr("width", (width + (right + left)) * pixelRatio)
-      .attr("height", (height + (top + bottom)) * pixelRatio)
-
 
     if (prevWidth !== _chartBody.style("width") || prevHeight !== _chartBody.style("height")) {
       // TODO(croot): What about when the margins change?
@@ -755,7 +747,7 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
     // If BE supports ordinal scales for X axis, use
     // rangeBands here: i.e. x.rangeBands([0, _chart.xAxisLength()], ...)
 
-    // currently only supports quantitative scal
+    // currently only supports quantitative scales
     x.range([0, Math.round(_chart.xAxisLength())])
 
     const customTimeFormat = d3.time.format.utc.multi([
@@ -785,11 +777,10 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
       }]
     ])
 
-    _xAxis = _xAxis.scale(x).tickFormat(xdom[0] instanceof Date ? customTimeFormat : _xAxis.tickFormat())
+    _xAxis = _xAxis.scale(x).tickFormat(xdom[0] instanceof Date ? customTimeFormat : null)
 
     _xAxis.ticks(_chart.effectiveWidth() / _xAxis.scale().ticks().length < 64 ? Math.ceil(_chart.effectiveWidth() / 64) : 10)
 
-    _chart.prepareLabelEdit("x")
 
     renderVerticalGridLines(g, x, transitionDuration)
   }
@@ -910,7 +901,6 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
     }
 
     _chart._renderHorizontalGridLinesForAxis(g, y, _yAxis, transitionDuration)
-    _chart.prepareLabelEdit("y")
   }
 
   _chart.renderYAxisLabel = function (axisClass, text, rotation, labelXPosition) {
@@ -927,8 +917,10 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
       // TODO(croot): should add the rotation and labelXPosition here
       // As of now (09/02/2016) the chart.css is breaking this.
 
+      const yOffset = 0
+
       yLabel
-        .style("top", (_chart.effectiveHeight() / 2 + _chart.margins().top) + "px")
+        .style("top", ((_chart.effectiveHeight() + yOffset) / 2 + _chart.margins().top) + "px")
         .text(text)
     }
   }

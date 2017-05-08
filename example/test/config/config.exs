@@ -8,6 +8,3 @@ config :hound,
 
 config :test,
   url: "http://127.0.0.1:8081/example"
-
-config :whippet,
-  animation_timeout: 1500

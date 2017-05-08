@@ -181,22 +181,10 @@ export default function heatMap (parent, chartGroup) {
   }
 
 /* OVERRIDE EXTEND ----------------------------------------------------------*/
-  _chart.xAxisLabel = function (xLabel) {
-    if (!arguments.length) {
-      return _xLabel
-    }
+  _chart.setLabels = function (xLabel, yLabel) {
     _xLabel = xLabel
-    return _chart
-  }
-
-  _chart.yAxisLabel = function (yLabel) {
-    if (!arguments.length) {
-      return _yLabel
-    }
     _yLabel = yLabel
-    return _chart
   }
-
   let _xAxisOnClick = function (d) {
     filterAxis(0, d)
   }
@@ -597,8 +585,6 @@ export default function heatMap (parent, chartGroup) {
     yLabel
             .style("top", (_chart.effectiveHeight() / 2 + _chart.margins().top) + "px")
 
-    _chart.prepareLabelEdit("y")
-
     let xLabel = root.selectAll(".x-axis-label")
 
     if (xLabel.empty()) {
@@ -609,8 +595,6 @@ export default function heatMap (parent, chartGroup) {
 
     xLabel
             .style("left", (_chart.effectiveWidth() / 2 + _chart.margins().left) + "px")
-
-    _chart.prepareLabelEdit("x")
   }
 
 /* --------------------------------------------------------------------------*/

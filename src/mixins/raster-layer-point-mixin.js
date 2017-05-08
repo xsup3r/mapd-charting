@@ -2,11 +2,6 @@ import {decrementSampledCount, incrementSampledCount} from "../core/core"
 import {lastFilteredSize} from "../core/core-async"
 import {createRasterLayerGetterSetter, createVegaAttrMixin} from "../utils/utils-vega"
 
-const AUTOSIZE_DOMAIN_DEFAULTS = [100000, 0]
-const AUTOSIZE_RANGE_DEFAULTS = [2.0, 5.0]
-const AUTOSIZE_RANGE_MININUM = [1, 1]
-const SIZING_THRESHOLD_FOR_AUTOSIZE_RANGE_MININUM = 1500000
-
 export default function rasterLayerPointMixin (_layer) {
   _layer.xDim = createRasterLayerGetterSetter(_layer, null)
   _layer.yDim = createRasterLayerGetterSetter(_layer, null)
@@ -108,18 +103,9 @@ export default function rasterLayerPointMixin (_layer) {
             throw new Error("Type error for the sizeAttr property for layer " + layerName + ". The sizeAttr must be a string (referencing an column in the query) or a number.")
           }
         } else if (_layer.dynamicSize() !== null && _layer.sampling() && lastFilteredSize(group.getCrossfilterId()) !== undefined) {
-          // @TODO don't tie this to sampling - meaning having a dynamicSize will also require count to be computed first by dc
+                    // @TODO don't tie this to sampling - meaning having a dynamicSize will also require count to be computed first by dc
           const cap = _layer.cap()
-          const size = Math.min(lastFilteredSize(group.getCrossfilterId()), cap)
-
-          const dynamicRScale = d3.scale.sqrt()
-            .domain(AUTOSIZE_DOMAIN_DEFAULTS)
-            .range(size > SIZING_THRESHOLD_FOR_AUTOSIZE_RANGE_MININUM ? AUTOSIZE_RANGE_MININUM : AUTOSIZE_RANGE_DEFAULTS)
-            .clamp(true)
-
-          _layer.dynamicSize(dynamicRScale)
-
-          markPropObj.size = Math.round(dynamicRScale(size) * pixelRatio)
+          markPropObj.size = Math.round(_layer.dynamicSize()(Math.min(lastFilteredSize(group.getCrossfilterId()), cap)) * pixelRatio)
         } else {
           markPropObj.size = _layer.defaultSize() * pixelRatio
         }
@@ -139,20 +125,13 @@ export default function rasterLayerPointMixin (_layer) {
             throw new Error("Error trying to reference a fill color scale for raster layer " + layerName + ". The vega color scale does not have a name.")
           }
 
-          if (colorScale.hasOwnProperty("accumulator")) {
-            markPropObj.fillColor = {
-              scale: colorScale.name,
-              value: 0
-            }
-          } else {
-            if (colorAttr === null) {
-              throw new Error("Error trying to reference a fill color scale for raster layer " + layerName + ". The layer does not have a fillColorAttr defined.")
-            }
+          if (colorAttr === null) {
+            throw new Error("Error trying to reference a fill color scale for raster layer " + layerName + ". The layer does not have a fillColorAttr defined.")
+          }
 
-            markPropObj.fillColor = {
-              scale: colorScale.name,
-              field: colorAttr
-            }
+          markPropObj.fillColor = {
+            scale: colorScale.name,
+            field: colorAttr
           }
           scales.push(colorScale)
         } else if (colorAttr) {
