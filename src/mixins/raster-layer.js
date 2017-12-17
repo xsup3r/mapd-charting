@@ -4,7 +4,7 @@ import rasterLayerPolyMixin from "./raster-layer-poly-mixin"
 import rasterLayerHeatmapMixin from "./raster-layer-heatmap-mixin"
 import {createRasterLayerGetterSetter, createVegaAttrMixin, notNull} from "../utils/utils-vega"
 
-const validLayerTypes = ["points", "polys"]
+const validLayerTypes = ["points", "polys", "heat"]
 
 export default function rasterLayer (layerType) {
   const _layerType = layerType
@@ -12,7 +12,7 @@ export default function rasterLayer (layerType) {
   let _dimension = null
   let _group = null
   const _groupName = null
-  let _mandatoryAttributes = ["dimension", "group"]
+  let _mandatoryAttributes = []
 
   var _layer = capMixin({
     setDataAsync (callback) {
@@ -48,7 +48,7 @@ export default function rasterLayer (layerType) {
     _layer = rasterLayerPointMixin(_layer)
   } else if (layerType == "polys") {
     _layer = rasterLayerPolyMixin(_layer)
-  } else if (layerType == "heat") {
+  } else if (/heat/.test(layerType)) {
     _layer = rasterLayerHeatmapMixin(_layer)
   } else {
     throw new Error("\"" + layerType + "\" is not a valid layer type. The valid layer types are: " + validLayerTypes.join(", "))
@@ -197,15 +197,7 @@ export default function rasterLayer (layerType) {
   }
 
   _layer.genVega = function (chart, layerName) {
-    _mandatoryAttributes.forEach((attrName) => {
-      checkForMandatoryLayerAttr(_layer, attrName, layerName)
-    })
-
     const cap = _layer.cap()
-    if (_layer._requiresCap && _layer._requiresCap() && cap === Infinity) {
-      throw new Error("A cap for the layer " + layerName + " is undefined but a cap is required. Cannot create a query.")
-    }
-
     const group = _layer.group() || {}
     let query = ""
     if (group.type === "dimension") {
@@ -219,7 +211,7 @@ export default function rasterLayer (layerType) {
     }
 
     if (_layer.type === "heatmap") {
-      const vega = _layer._genVega(genHeatConfigFromChart(chart))
+      const vega = _layer._genVega({...genHeatConfigFromChart(chart), layerName})
       return vega
     } else {
       const vega = _layer._genVega(chart, layerName, group, query)
@@ -244,8 +236,8 @@ export default function rasterLayer (layerType) {
         // data structure, but probably not an issue given the amount
         // of popup col attrs to iterate through is small
     const dim = _layer.group() || _layer.dimension()
-    if (dim) {
-      const projExprs = dim.getProjectOn(true) // handles the group and dimension case
+    if (dim || _layer.layerType() === "points") {
+      const projExprs = _layer.layerType() === "points" ? _layer.getProjections() : dim.getProjectOn(true) // handles the group and dimension case
       const regex = /^\s*(\S+)\s+as\s+(\S+)/i
       const funcRegex = /^\s*(\S+\s*\(.*\))\s+as\s+(\S+)/i
       for (let i = 0; i < projExprs.length; ++i) {
@@ -266,6 +258,7 @@ export default function rasterLayer (layerType) {
         }
       }
     }
+
 
     return popupColSet.add(colAttr)
   }

@@ -29,6 +29,7 @@ export default function mapdTable (parent, chartGroup) {
 
   let _filteredColumns = {}
   let _columnFilterMap = {}
+  let _crossfilter = null
   let _tableFilter = null
   let _sortColumn = null
   let _dimOrGroup = null
@@ -60,11 +61,12 @@ export default function mapdTable (parent, chartGroup) {
     _chart.root().html("")
   }
 
-  _chart.tableFilter = function (_) {
+  _chart.crossfilter = function (_) {
     if (!arguments.length) {
-      return _tableFilter
+      return _crossfilter
     }
-    _tableFilter = _
+    _tableFilter = _.filter()
+    _crossfilter = _
     return _chart
   }
 
@@ -289,6 +291,10 @@ export default function mapdTable (parent, chartGroup) {
         .html(d => formatDataValue(d[col.name]))
         .classed("filtered", col.expression in _filteredColumns)
         .on("click", d => {
+          // detect if user is selecting text or clicking a value, if so don't filter data
+          const s = window.getSelection().toString()
+          if (s.length) { return }
+
           if (_isGroupedData) {
             _chart.onClick(d)
           } else if (col.expression in _filteredColumns) {
@@ -335,6 +341,14 @@ export default function mapdTable (parent, chartGroup) {
                     })
                     .classed("active", _sortColumn ? _sortColumn.index === i : false)
                     .classed(_sortColumn ? _sortColumn.order : "", true)
+                    .style("width", d3.select(this).node().getBoundingClientRect().width + "px")
+
+
+              const textSpan = sortLabel.append("span")
+                    .text(d.label)
+
+              const sortButton = sortLabel.append("div")
+                    .attr("class", "sort-btn")
                     .on("click", () => {
                       _tableWrapper.selectAll(".table-sort")
                             .classed("active asc desc", false)
@@ -348,15 +362,6 @@ export default function mapdTable (parent, chartGroup) {
                       _chart._invokeSortListener(_sortColumn)
                       redrawAllAsync(_chart.chartGroup())
                     })
-                    .style("width", d3.select(this).node().getBoundingClientRect().width + "px")
-
-
-              const textSpan = sortLabel.append("span")
-                    .text(d.label)
-
-              const sortButton = sortLabel.append("div")
-                    .attr("class", "sort-btn")
-
 
               sortButton.append("svg")
                     .attr("class", "svg-icon")
@@ -390,9 +395,15 @@ export default function mapdTable (parent, chartGroup) {
   }
 
   function filterCol (expr, val) {
-    const dateFormat = d3.time.format.utc("%Y-%m-%d")
 
-    if (Object.prototype.toString.call(val) === "[object Date]") {
+    const key = _crossfilter.getTable()[0] + "." + expr
+    const columns = (_crossfilter.getColumns())
+    const type = columns[key].type
+
+    if (type === "TIMESTAMP") {
+      val = `TIMESTAMP(0) '${val.toISOString().slice(0, 19).replace("T", " ")}'`
+    } else if (type === "DATE") {
+      const dateFormat = d3.time.format.utc("%Y-%m-%d")
       val = "DATE '" + dateFormat(val) + "'"
     } else if (val && typeof val === "string") {
       val = "'" + val.replace(/'/g, "''") + "'"

@@ -40,12 +40,18 @@ export default function coordinateGridRasterMixin (_chart, _mapboxgl, browser) {
   _chart = colorMixin(marginMixin(baseMixin(_chart)))
   _chart._mandatoryAttributes().push("x", "y")
 
+  _chart.resetSvg = function () {
+    _chart.select("div.svg-wrapper").html("")
+
+    return _chart.generateSvg()
+  }
+
   _chart.filters = function () {
     return _filters
   }
 
   _chart.filter = function (filters) {
-    if (typeof filters === "undefined" || filters === null) {
+    if (typeof filters === "undefined" || filters === null || filters === Symbol.for("clear")) {
       _initialFilters = _initialFilters || [[]]
       filterChartDimensions(_initialFilters[0][0], _initialFilters[0][1], true)
     } else if (Array.isArray(filters) && filters.length === 2) {

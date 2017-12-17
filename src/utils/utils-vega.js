@@ -1,12 +1,35 @@
+import d3 from "d3"
+
 export function notNull (value) { return value != null /* double-equals also catches undefined */ }
 
-function convertHexToRGBA (hex, opacity) {
-  hex = hex.replace("#", "")
+export function adjustOpacity (color, opacity = 1) {
+  if (!(/#/).test(color)) {
+    return color
+  }
+  const hex = color.replace("#", "")
   const r = parseInt(hex.substring(0, 2), 16)
   const g = parseInt(hex.substring(2, 4), 16)
   const b = parseInt(hex.substring(4, 6), 16)
+  return `rgba(${r},${g},${b},${opacity})`
+}
 
-  return `rgba(${r},${g},${b},${opacity / 100})`
+export function adjustRGBAOpacity (rgba, opacity) {
+  let [r, g, b, a] = rgba.split("(")[1].split(")")[0].split(",")
+  if (a) {
+    const relativeOpacity = (parseFloat(a) - (1 - opacity))
+    a = `${relativeOpacity > 0 ? relativeOpacity : 0.01}`
+  } else {
+    a = opacity
+  }
+  return `rgba(${r},${g},${b},${a})`
+}
+
+const ordScale = d3.scale.ordinal()
+const quantScale = d3.scale.quantize()
+
+const capAttrMap = {
+  FillColor: "color",
+  Size: "size"
 }
 
 export function createVegaAttrMixin (layerObj, attrName, defaultVal, nullVal, useScale, prePostFuncs) {
@@ -76,9 +99,15 @@ export function createVegaAttrMixin (layerObj, attrName, defaultVal, nullVal, us
     if (input === null) {
       rtnVal = layerObj[nullFunc]()
     } else if (input !== undefined && useScale) {
-      const scaleObj = layerObj[scaleFunc]()
-      if (scaleObj && scaleObj.domain && scaleObj.domain().length && scaleObj.range().length) {
-        rtnVal = scaleObj(input)
+      const capAttrObj = layerObj.getState().encoding[capAttrMap[capAttrName]]
+      if (capAttrObj && capAttrObj.domain && capAttrObj.domain.length && capAttrObj.domain.includes(input) && capAttrObj.range.length) {
+        if (capAttrObj.type === "ordinal") {
+          ordScale.domain(capAttrObj.domain).range(capAttrObj.range)
+          rtnVal = ordScale(input)
+        } else {
+          quantScale.domain(capAttrObj.domain).range(capAttrObj.range)
+          rtnVal = quantScale(input)
+        }
       }
     }
 

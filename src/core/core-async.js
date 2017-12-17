@@ -202,6 +202,11 @@ export function lastFilteredSize (crossfilterId) {
   return _lastFilteredSize[crossfilterId]
 }
 
+export function setLastFilteredSize (crossfilterId, value) {
+  _lastFilteredSize[crossfilterId] = value
+}
+
+
 export function resetState () {
   _groupAll = {}
   _lastFilteredSize = {}

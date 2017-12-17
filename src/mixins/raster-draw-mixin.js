@@ -76,7 +76,7 @@ export function rasterDrawMixin (chart) {
 
     const layers = (chart.getLayers && typeof chart.getLayers === "function") ? chart.getLayers() : [chart]
     layers.forEach(layer => {
-      if (!layer.layerType || typeof layer.layerType !== "function" || layer.layerType() === "points") {
+      if (!layer.layerType || typeof layer.layerType !== "function" || layer.layerType() === "points" || layer.layerType() === "heat") {
         let crossFilter = null
         let filterObj = null
         const group = layer.group()
@@ -86,24 +86,28 @@ export function rasterDrawMixin (chart) {
           const dim = layer.dimension()
           if (dim) {
             crossFilter = dim.getCrossfilter()
+          } else {
+            crossFilter = layer.crossfilter()
           }
         }
         if (crossFilter) {
           filterObj = coordFilters.get(crossFilter)
           if (!filterObj) {
             filterObj = {
-              coordFilter: crossFilter.filter()
+              coordFilter: crossFilter.filter(),
+              px: [],
+              py: []
             }
             coordFilters.set(crossFilter, filterObj)
+            filterObj.shapeFilters = []
           }
-          filterObj.shapeFilters = []
           const xdim = layer.xDim()
           const ydim = layer.yDim()
           if (xdim && ydim) {
             const px = xdim.value()[0]
             const py = ydim.value()[0]
-            filterObj.px = px
-            filterObj.py = py
+            filterObj.px.push(px)
+            filterObj.py.push(py)
             shapes.forEach(shape => {
               if (shape instanceof LatLonCircle) {
                 const pos = shape.getWorldPosition()
@@ -158,9 +162,12 @@ export function rasterDrawMixin (chart) {
     })
 
     coordFilters.forEach((filterObj) => {
-      if (filterObj.px && filterObj.py && filterObj.shapeFilters.length) {
-        const filterStmt = `(${filterObj.px} IS NOT NULL AND ${filterObj.py} IS NOT NULL AND (${filterObj.shapeFilters.join(" OR ")}))`
+      if (filterObj.px.length && filterObj.py.length && filterObj.shapeFilters.length) {
+        const filterStmt = filterObj.px.map((e, i) => ({px: e, py: filterObj.py[i]})).reduce((acc, e) => (acc.some(e1 => e1.px === e.px && e1.py === e.py) ? acc : [...acc, e]), []).map((e, i) => `(${e.px} IS NOT NULL AND ${e.py} IS NOT NULL AND (${filterObj.shapeFilters[i]}))`).join(" AND ")
         filterObj.coordFilter.filter([filterStmt])
+        filterObj.px = []
+        filterObj.py = []
+        filterObj.shapeFilters = []
       } else {
         filterObj.coordFilter.filter()
       }
